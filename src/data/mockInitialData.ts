@@ -68,7 +68,7 @@ export const initialAppUsers: AppUserAccount[] = [
     username: 'azazmadkiya',
     password: '9687709315',
     displayName: 'Azazmadkiya',
-    email: 'azazmadkiya@ncbltransport.com',
+    email: 'azazmadkiya@gmail.com',
     role: 'admin',
     phone: '+91 96877 09315'
   }

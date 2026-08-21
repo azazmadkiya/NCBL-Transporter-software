@@ -116,7 +116,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       id: editingUser ? editingUser.id : `user-${cleanUsername}`,
       username: cleanUsername,
       displayName: userFormData.displayName?.trim() || cleanUsername,
-      email: userFormData.email?.trim() || `${cleanUsername}@ncbltransport.com`,
+      email: userFormData.email?.trim() || (cleanUsername === 'azazmadkiya' ? 'azazmadkiya@gmail.com' : `${cleanUsername}@ncbltransport.com`),
       password: userFormData.password.trim(),
       role: (userFormData.role as UserRole) || 'viewer',
       phone: userFormData.phone?.trim() || '',

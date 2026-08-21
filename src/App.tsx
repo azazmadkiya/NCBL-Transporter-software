@@ -42,10 +42,16 @@ export default function App() {
 
   // Current user & authentication state
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('nirmala_logged_user');
+    const saved = localStorage.getItem('ncbl_logged_user') || localStorage.getItem('nirmala_logged_user');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.username?.toLowerCase() === 'azazmadkiya' && (!parsed.email || parsed.email.includes('ncbltransport.com'))) {
+          parsed.email = 'azazmadkiya@gmail.com';
+          localStorage.setItem('ncbl_logged_user', JSON.stringify(parsed));
+          localStorage.setItem('nirmala_logged_user', JSON.stringify(parsed));
+        }
+        return parsed;
       } catch (e) {
         return null;
       }

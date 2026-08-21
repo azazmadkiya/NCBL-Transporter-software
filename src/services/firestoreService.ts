@@ -934,8 +934,12 @@ export function subscribeUserAccounts(callback: (users: AppUserAccount[]) => voi
 
       // Merge with initial users to ensure default admin always present
       for (const initU of initialAppUsers) {
-        if (!usersList.some(u => u.username.toLowerCase() === initU.username.toLowerCase())) {
+        const found = usersList.find(u => u.username.toLowerCase() === initU.username.toLowerCase());
+        if (!found) {
           usersList.push(initU);
+        } else if (found.username.toLowerCase() === 'azazmadkiya' && (!found.email || found.email.includes('ncbltransport.com'))) {
+          found.email = 'azazmadkiya@gmail.com';
+          setDoc(doc(db, USERS_COL, found.id || 'user-azazmadkiya'), cleanForFirestore(found), { merge: true }).catch(() => {});
         }
       }
 

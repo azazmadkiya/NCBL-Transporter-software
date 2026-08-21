@@ -2094,7 +2094,7 @@ export const PartyLedgerView: React.FC<PartyLedgerViewProps> = ({
             stateCode: '27',
             pincode: '411044',
             phone: '+91 96877 09315',
-            email: 'azazmadkiya@ncbltransport.com',
+            email: 'azazmadkiya@gmail.com',
             bankName: 'HDFC Bank Ltd',
             bankAccountNo: '50200012345678',
             bankIfsc: 'HDFC0001234',

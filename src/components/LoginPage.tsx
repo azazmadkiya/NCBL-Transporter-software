@@ -30,10 +30,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       );
 
       if (matched) {
+        const userEmail = (matched.username.toLowerCase() === 'azazmadkiya' && (!matched.email || matched.email.includes('ncbltransport.com')))
+          ? 'azazmadkiya@gmail.com'
+          : (matched.email || `${matched.username}@ncbltransport.com`);
+
         const user: UserProfile = {
           uid: matched.id,
           displayName: matched.displayName,
-          email: matched.email || `${matched.username}@ncbltransport.com`,
+          email: userEmail,
           role: matched.role,
           phone: matched.phone,
           truckNumber: matched.truckNumber,
@@ -48,7 +52,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         const user: UserProfile = {
           uid: 'user-azazmadkiya',
           displayName: 'Azazmadkiya',
-          email: 'azazmadkiya@ncbltransport.com',
+          email: 'azazmadkiya@gmail.com',
           role: 'admin',
           username: 'azazmadkiya'
         };
