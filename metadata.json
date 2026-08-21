@@ -1,0 +1,8 @@
+{
+  "name": "NCBL Transporter software",
+  "description": "Logistics \u0026 transport management app for tax and normal invoices, tax slabs, party/truck ledgers, payment tracking, PDF export/printing, and role-based access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

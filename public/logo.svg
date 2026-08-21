@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background container -->
+  <rect width="800" height="450" rx="32" fill="#ffffff" />
+  
+  <!-- Outer Badge / Oval with rich deep navy -->
+  <ellipse cx="400" cy="225" rx="360" ry="175" fill="url(#bgGrad)" stroke="#2563eb" stroke-width="4" />
+  <ellipse cx="400" cy="225" rx="346" ry="162" fill="none" stroke="#60a5fa" stroke-width="2" opacity="0.6" stroke-dasharray="8 4" />
+
+  <!-- Main NCBL Typography -->
+  <g fill="#ffffff" text-anchor="middle">
+    <text x="400" y="220" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="124" letter-spacing="8" fill="#ffffff">NCBL</text>
+    
+    <!-- Subtitle Strip -->
+    <rect x="200" y="250" width="400" height="3" rx="1.5" fill="url(#accentGrad)" />
+    
+    <!-- Transport Subtext -->
+    <text x="400" y="305" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="34" letter-spacing="14" fill="#93c5fd">TRANSPORT</text>
+  </g>
+  
+  <!-- Speed lines / road dynamics -->
+  <path d="M 120 225 Q 160 225 210 225" stroke="#60a5fa" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+  <path d="M 90 205 Q 140 205 180 205" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+  <path d="M 590 225 Q 640 225 680 225" stroke="#60a5fa" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+  <path d="M 620 245 Q 660 245 710 245" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+
+  <!-- TM / Verified Badge -->
+  <text x="680" y="105" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#1e3a8a">TM</text>
+  <circle cx="692" cy="98" r="15" fill="none" stroke="#1e3a8a" stroke-width="2" />
+</svg>

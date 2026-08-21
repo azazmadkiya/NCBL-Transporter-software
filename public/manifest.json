@@ -1,0 +1,17 @@
+{
+  "short_name": "NCBL Transport",
+  "name": "NCBL Transport Fleet & Billing",
+  "description": "Logistics & transport management app for tax and normal invoices, party/truck ledgers, and payment tracking.",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#0f172a",
+  "theme_color": "#1d4ed8",
+  "display": "standalone",
+  "orientation": "portrait"
+}

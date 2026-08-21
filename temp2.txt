@@ -1,0 +1,10 @@
+                            <div>
+                              <div className="font-mono font-bold text-slate-900 truncate">{row.vehicleNumber || '—'}</div>
+                              <div className="text-slate-600 text-[8.5px] truncate">{row.materialType || 'General'}</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 text-[8.5px]">Payment Received</span>
+                          )}
+                        </td>
+
+                        {/* Basic Amount */}
