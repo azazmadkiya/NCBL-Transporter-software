@@ -34,6 +34,7 @@ import { StockProductsView } from './components/StockProductsView';
 import { SalesBillsView } from './components/SalesBillsView';
 import { SalesBillBuilder } from './components/SalesBillBuilder';
 import { PurchaseBillBuilder } from './components/PurchaseBillBuilder';
+import { CalculatorModal } from './components/CalculatorModal';
 
 export default function App() {
   // App initial loading splash screen
@@ -77,6 +78,7 @@ export default function App() {
   const [selectedPurchaseProduct, setSelectedPurchaseProduct] = useState<ProductItem | null>(null);
   const [paymentOptionsInvoice, setPaymentOptionsInvoice] = useState<Invoice | null>(null);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
+  const [showCalculatorModal, setShowCalculatorModal] = useState(false);
 
   // Initialize Firestore listeners & seed initial data
   useEffect(() => {
@@ -423,6 +425,7 @@ export default function App() {
         onLogout={handleLogout}
         onChangePassword={() => setShowChangePassModal(true)}
         onSwitchRole={handleSwitchRole}
+        onOpenCalculator={() => setShowCalculatorModal(true)}
         onNewInvoice={() => {
           setSelectedEditInvoice(null);
           setActiveTab('create_invoice');
@@ -863,6 +866,14 @@ export default function App() {
         <AuthModal
           onLoginSuccess={(user) => setCurrentUser(user)}
           onClose={() => setShowAuthModal(false)}
+        />
+      )}
+
+      {/* Transport & Tax Calculator Modal */}
+      {showCalculatorModal && (
+        <CalculatorModal
+          isOpen={showCalculatorModal}
+          onClose={() => setShowCalculatorModal(false)}
         />
       )}
 

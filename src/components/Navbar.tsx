@@ -1,7 +1,7 @@
 import React from 'react';
 import { UserProfile, UserRole } from '../types';
 import { 
-  Truck, ShieldCheck, UserCheck, LogIn, LogOut, PlusCircle, FileText, Menu
+  ShieldCheck, LogOut, PlusCircle, Menu, Calculator
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -11,6 +11,7 @@ interface NavbarProps {
   onChangePassword?: () => void;
   onSwitchRole: (role: UserRole) => void;
   onNewInvoice: () => void;
+  onOpenCalculator?: () => void;
   onToggleSidebarMobile?: () => void;
   activeTab: string;
 }
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onChangePassword,
   onSwitchRole,
   onNewInvoice,
+  onOpenCalculator,
   onToggleSidebarMobile,
 }) => {
   return (
@@ -55,8 +57,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Right Action Bar */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-2.5">
             
+            {/* Calculator Button in Top Navbar */}
+            <button
+              type="button"
+              onClick={onOpenCalculator}
+              className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-2.5 py-1 rounded text-xs font-bold transition-all shadow-xs active:scale-95 hover:border-slate-400"
+              title="Open Transport & Tax Calculator"
+            >
+              <Calculator className="w-3.5 h-3.5 text-blue-700" />
+              <span className="hidden sm:inline">Calculator</span>
+            </button>
+
             {/* Quick New Invoice Button */}
             {['admin', 'accountant'].includes(currentUser?.role || '') && (
               <button
