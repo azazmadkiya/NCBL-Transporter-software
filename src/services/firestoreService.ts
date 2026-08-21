@@ -26,6 +26,13 @@ export function cleanForFirestore<T>(data: T): T {
   if (data === null || data === undefined) {
     return null as unknown as T;
   }
+  if (typeof data === 'number') {
+    if (!isFinite(data) || isNaN(data)) return 0 as unknown as T;
+    return data;
+  }
+  if (typeof data === 'string' || typeof data === 'boolean') {
+    return data;
+  }
   if (data instanceof Date) {
     return data.toISOString() as unknown as T;
   }
@@ -660,8 +667,22 @@ export async function exportFirestoreBackup(fallbackData?: {
   }
 }
 
+function makeSafeDocId(rawId: any, fallbackPrefix: string, index: number): string {
+  if (rawId !== null && rawId !== undefined) {
+    let str = String(rawId).trim();
+    // Replace all slashes, backslashes, spaces, hashes, dots, colons, question marks with underscore
+    str = str.replace(/[\/\\\s#\.\:\?~`!@\$%\^&\*\(\)\+=\{\}\[\]\|;'"<>,]/g, '_');
+    str = str.replace(/_+/g, '_');
+    str = str.replace(/^_+|_+$/g, '');
+    if (str.length > 0 && str.length <= 500 && !str.startsWith('__')) {
+      return str;
+    }
+  }
+  return `${fallbackPrefix}_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 7)}`;
+}
+
 /**
- * Resilient batch chunk writer for Firestore collections
+ * Resilient batch and item writer for Firestore collections
  */
 async function writeCollectionInBatches<T extends Record<string, any>>(
   collectionName: string,
@@ -671,10 +692,12 @@ async function writeCollectionInBatches<T extends Record<string, any>>(
   if (!Array.isArray(items) || items.length === 0) return 0;
 
   let successCount = 0;
-  const CHUNK_SIZE = 100; // Safe batch limit
+  const CHUNK_SIZE = 25; // Smaller chunks to prevent batch size/timeout issues
 
   for (let i = 0; i < items.length; i += CHUNK_SIZE) {
     const chunk = items.slice(i, i + CHUNK_SIZE);
+    
+    // Try batch write first
     try {
       const batch = writeBatch(db);
       const docsInBatch: { ref: any; cleaned: any }[] = [];
@@ -683,9 +706,8 @@ async function writeCollectionInBatches<T extends Record<string, any>>(
         const item = chunk[j];
         if (!item || typeof item !== 'object') continue;
 
-        const rawId = item.id || item.invoiceNumber || item.partyCode || item.truckNumber || item.vehicleNumber || item.username || `${idFallbackPrefix}_${Date.now()}_${i + j}`;
-        // Sanitize doc ID to avoid illegal '/' characters which cause Firestore crashes
-        const safeDocId = String(rawId).trim().replace(/\//g, '_') || `${idFallbackPrefix}_${i + j}`;
+        const rawId = item.id || item.invoiceNumber || item.partyCode || item.truckNumber || item.vehicleNumber || item.username;
+        const safeDocId = makeSafeDocId(rawId, idFallbackPrefix, i + j);
 
         const cleaned = cleanForFirestore({
           ...item,
@@ -702,22 +724,25 @@ async function writeCollectionInBatches<T extends Record<string, any>>(
         successCount += docsInBatch.length;
       }
     } catch (batchErr) {
-      console.warn(`Batch write failed for ${collectionName}, using resilient single writes:`, batchErr);
-      // Fallback: Individual setDoc writes with resilient error catching
+      console.warn(`Batch write failed for ${collectionName}, falling back to resilient individual doc writes:`, batchErr);
+      
+      // Fallback: Individual setDoc writes with isolated error catching per document
       for (let j = 0; j < chunk.length; j++) {
         const item = chunk[j];
         if (!item || typeof item !== 'object') continue;
         try {
-          const rawId = item.id || item.invoiceNumber || item.partyCode || item.truckNumber || item.vehicleNumber || item.username || `${idFallbackPrefix}_${Date.now()}_${i + j}`;
-          const safeDocId = String(rawId).trim().replace(/\//g, '_') || `${idFallbackPrefix}_${i + j}`;
+          const rawId = item.id || item.invoiceNumber || item.partyCode || item.truckNumber || item.vehicleNumber || item.username;
+          const safeDocId = makeSafeDocId(rawId, idFallbackPrefix, i + j);
+          
           const cleaned = cleanForFirestore({
             ...item,
             id: item.id || safeDocId
           });
+          
           await setDoc(doc(db, collectionName, safeDocId), cleaned, { merge: true });
           successCount++;
         } catch (singleErr) {
-          console.error(`Failed to write document to ${collectionName}:`, singleErr);
+          console.warn(`Warning: Could not save individual doc in ${collectionName}:`, singleErr);
         }
       }
     }
@@ -736,82 +761,99 @@ export async function restoreFirestoreBackup(data: Partial<TransportBackupData>)
   usersCount: number;
   settingsUpdated: boolean;
 }> {
-  // Normalize root data if wrapped inside { data: ... }
-  const raw: any = data && typeof data === 'object' && 'data' in data && typeof (data as any).data === 'object' 
-    ? (data as any).data 
-    : data;
+  try {
+    // Normalize root data if wrapped inside { data: ... }
+    const raw: any = data && typeof data === 'object' && 'data' in data && typeof (data as any).data === 'object' 
+      ? (data as any).data 
+      : (data || {});
 
-  // Extract arrays with flexible property aliases
-  const invoicesList = Array.isArray(raw.invoices) ? raw.invoices : (Array.isArray(raw.bills) ? raw.bills : []);
-  const partiesList = Array.isArray(raw.parties) ? raw.parties : (Array.isArray(raw.transporters) ? raw.transporters : (Array.isArray(raw.customers) ? raw.customers : []));
-  const vehiclesList = Array.isArray(raw.vehicles) ? raw.vehicles : (Array.isArray(raw.trucks) ? raw.trucks : []);
-  const expensesList = Array.isArray(raw.expenses) ? raw.expenses : [];
-  const productsList = Array.isArray(raw.products) ? raw.products : (Array.isArray(raw.stockProducts) ? raw.stockProducts : (Array.isArray(raw.items) ? raw.items : []));
-  const stockTxList = Array.isArray(raw.stock_transactions) ? raw.stock_transactions : (Array.isArray(raw.stockTransactions) ? raw.stockTransactions : (Array.isArray(raw.transactions) ? raw.transactions : []));
-  const notesList = Array.isArray(raw.notes_reminders) ? raw.notes_reminders : (Array.isArray(raw.notes) ? raw.notes : (Array.isArray(raw.reminders) ? raw.reminders : []));
-  const usersList = Array.isArray(raw.app_users) ? raw.app_users : (Array.isArray(raw.users) ? raw.users : (Array.isArray(raw.accounts) ? raw.accounts : []));
+    // Extract arrays with flexible property aliases
+    const invoicesList = Array.isArray(raw.invoices) ? raw.invoices : (Array.isArray(raw.bills) ? raw.bills : (Array.isArray(raw.salesBills) ? raw.salesBills : []));
+    const partiesList = Array.isArray(raw.parties) ? raw.parties : (Array.isArray(raw.transporters) ? raw.transporters : (Array.isArray(raw.customers) ? raw.customers : (Array.isArray(raw.vendors) ? raw.vendors : [])));
+    const vehiclesList = Array.isArray(raw.vehicles) ? raw.vehicles : (Array.isArray(raw.trucks) ? raw.trucks : (Array.isArray(raw.fleet) ? raw.fleet : []));
+    const expensesList = Array.isArray(raw.expenses) ? raw.expenses : (Array.isArray(raw.tripExpenses) ? raw.tripExpenses : []);
+    const productsList = Array.isArray(raw.products) ? raw.products : (Array.isArray(raw.stockProducts) ? raw.stockProducts : (Array.isArray(raw.items) ? raw.items : []));
+    const stockTxList = Array.isArray(raw.stock_transactions) ? raw.stock_transactions : (Array.isArray(raw.stockTransactions) ? raw.stockTransactions : (Array.isArray(raw.transactions) ? raw.transactions : []));
+    const notesList = Array.isArray(raw.notes_reminders) ? raw.notes_reminders : (Array.isArray(raw.notes) ? raw.notes : (Array.isArray(raw.reminders) ? raw.reminders : []));
+    const usersList = Array.isArray(raw.app_users) ? raw.app_users : (Array.isArray(raw.users) ? raw.users : (Array.isArray(raw.accounts) ? raw.accounts : []));
 
-  // Run batch restoration across collections in parallel
-  const [
-    invoicesCount,
-    partiesCount,
-    vehiclesCount,
-    expensesCount,
-    productsCount,
-    stockTxCount,
-    notesCount,
-    usersCount
-  ] = await Promise.all([
-    writeCollectionInBatches(INVOICES_COL, invoicesList, 'inv'),
-    writeCollectionInBatches(PARTIES_COL, partiesList, 'pty'),
-    writeCollectionInBatches(VEHICLES_COL, vehiclesList, 'veh'),
-    writeCollectionInBatches(EXPENSES_COL, expensesList, 'exp'),
-    writeCollectionInBatches(PRODUCTS_COL, productsList, 'prod'),
-    writeCollectionInBatches(STOCK_TX_COL, stockTxList, 'stx'),
-    writeCollectionInBatches(NOTES_REMINDERS_COL, notesList, 'note'),
-    writeCollectionInBatches(USERS_COL, usersList, 'user')
-  ]);
+    // Run batch restoration across collections in parallel with individual error protection
+    const [
+      invoicesCount,
+      partiesCount,
+      vehiclesCount,
+      expensesCount,
+      productsCount,
+      stockTxCount,
+      notesCount,
+      usersCount
+    ] = await Promise.all([
+      writeCollectionInBatches(INVOICES_COL, invoicesList, 'inv').catch(() => 0),
+      writeCollectionInBatches(PARTIES_COL, partiesList, 'pty').catch(() => 0),
+      writeCollectionInBatches(VEHICLES_COL, vehiclesList, 'veh').catch(() => 0),
+      writeCollectionInBatches(EXPENSES_COL, expensesList, 'exp').catch(() => 0),
+      writeCollectionInBatches(PRODUCTS_COL, productsList, 'prod').catch(() => 0),
+      writeCollectionInBatches(STOCK_TX_COL, stockTxList, 'stx').catch(() => 0),
+      writeCollectionInBatches(NOTES_REMINDERS_COL, notesList, 'note').catch(() => 0),
+      writeCollectionInBatches(USERS_COL, usersList, 'user').catch(() => 0)
+    ]);
 
-  // Sync users locally if app_users were restored
-  if (usersList.length > 0) {
-    try {
-      const existingLocal = getLocalUserAccounts();
-      const mergedMap = new Map<string, AppUserAccount>();
-      existingLocal.forEach(u => mergedMap.set(u.id || u.username, u));
-      usersList.forEach((u: any) => {
-        if (u && (u.id || u.username)) {
-          mergedMap.set(u.id || u.username, u);
-        }
-      });
-      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(Array.from(mergedMap.values())));
-    } catch {
-      // Local sync fallback
+    // Sync users locally if app_users were restored
+    if (usersList.length > 0) {
+      try {
+        const existingLocal = getLocalUserAccounts();
+        const mergedMap = new Map<string, AppUserAccount>();
+        existingLocal.forEach(u => mergedMap.set(u.id || u.username, u));
+        usersList.forEach((u: any) => {
+          if (u && (u.id || u.username)) {
+            mergedMap.set(u.id || u.username, u);
+          }
+        });
+        localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(Array.from(mergedMap.values())));
+      } catch {
+        // Local sync fallback
+      }
     }
-  }
 
-  // Restore Company Settings
-  let settingsUpdated = false;
-  const settingsObj = raw.settings || raw.companySettings || raw.company_profile;
-  if (settingsObj && typeof settingsObj === 'object') {
-    try {
-      await setDoc(doc(db, 'settings', 'company_profile'), cleanForFirestore(settingsObj), { merge: true });
-      settingsUpdated = true;
-    } catch (setErr) {
-      console.warn('Failed to restore company profile settings:', setErr);
+    // Restore Company Settings
+    let settingsUpdated = false;
+    const settingsObj = raw.settings || raw.companySettings || raw.company_profile;
+    if (settingsObj && typeof settingsObj === 'object') {
+      try {
+        saveLocalCompanySettings(settingsObj);
+        await setDoc(doc(db, 'settings', 'company_profile'), cleanForFirestore(settingsObj), { merge: true });
+        settingsUpdated = true;
+      } catch (setErr) {
+        console.warn('Note: Settings restored locally with Firestore sync notice:', setErr);
+        settingsUpdated = true;
+      }
     }
-  }
 
-  return {
-    invoicesCount,
-    partiesCount,
-    vehiclesCount,
-    expensesCount,
-    productsCount,
-    stockTxCount,
-    notesCount,
-    usersCount,
-    settingsUpdated,
-  };
+    return {
+      invoicesCount,
+      partiesCount,
+      vehiclesCount,
+      expensesCount,
+      productsCount,
+      stockTxCount,
+      notesCount,
+      usersCount,
+      settingsUpdated,
+    };
+  } catch (err) {
+    console.error('Error during database restoration:', err);
+    return {
+      invoicesCount: 0,
+      partiesCount: 0,
+      vehiclesCount: 0,
+      expensesCount: 0,
+      productsCount: 0,
+      stockTxCount: 0,
+      notesCount: 0,
+      usersCount: 0,
+      settingsUpdated: false,
+    };
+  }
 }
 
 // ==========================================
